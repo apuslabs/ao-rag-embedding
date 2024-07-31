@@ -1,0 +1,135 @@
+local sqlite3 = require("lsqlite3")
+local json = require("json")
+DB = DB or nil
+
+Handlers.add(
+  "Init",
+  Handlers.utils.hasMatchingTag("Action", "Init"),
+  function()
+    -- DataSets = weave.getJsonData(DataTxID)
+    DB = sqlite3.open_memory()
+  
+    DB:exec[[
+      CREATE TABLE contents (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          dataset_hash TEXT NOT NULL,
+          content TEXT NOT NULL,
+          meta TEXT,
+          embeded INTEGER NOT NULL DEFAULT 0
+      );
+
+      CREATE TABLE prompts (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          reference TEXT NOT NULL,
+          dataset_hash TEXT NOT NULL,
+          sender TEXT NOT NULL,
+          prompt_text TEXT NOT NULL,
+          retrieve_result TEXT
+      );
+    ]]
+    
+    print("ok")
+  end
+)
+
+local SQL = {
+  INSERT_DOCUMENTS = [[
+    INSERT INTO contents (dataset_hash, content, meta) VALUES ('%s', '%s', '%s');
+  ]],
+  GET_UNEMBEDED_DOCUMENTS = [[
+    SELECT * FROM contents WHERE embeded = 0;
+  ]],
+  BATCH_SET_DOCUMENTS_EMBEDED = [[
+    UPDATE contents SET embeded = 1 WHERE id IN (%s);
+  ]],
+  ADD_PROMPT = [[
+    INSERT INTO prompts (reference, sender, dataset_hash, prompt_text) VALUES ('%s', '%s', '%s', '%s');
+  ]],
+  GET_TORETRIEVE_PROMPT = [[
+    SELECT * FROM prompts WHERE retrieve_result IS NULL;
+  ]],
+  SET_RETRIEVE_RESULT = [[
+    UPDATE prompts SET retrieve_result = '%s' WHERE id = %d;
+  ]]
+}
+
+Handlers.add("Create-Dataset", Handlers.utils.hasMatchingTag("Action", "Create-Dataset"), function (msg)
+  local data = json.decode(msg.Data)
+  assert(data, "Invalid data")
+  assert(data.hash, "Missing hash in data")
+  assert(data.list, "Missing list in data")
+  for _, DataSetItem in ipairs(data.list) do
+    assert(DataSetItem.content, "Missing content in DataSetItem")
+    local meta = DataSetItem.meta or {}
+    local query = string.format(
+      SQL.INSERT_DOCUMENTS,
+      data.hash,
+      DataSetItem.content,
+      json.encode(meta)
+    )
+    DB:exec(query)
+  end
+  print("Dataset created successfully")
+end)
+
+Handlers.add("Get-Unembeded-Documents", Handlers.utils.hasMatchingTag("Action", "Get-Unembeded-Documents"), function (msg)
+  local docs = {}
+  for row in DB:nrows(SQL.GET_UNEMBEDED_DOCUMENTS) do
+    table.insert(docs, row)
+  end
+  Handlers.utils.reply(json.encode(docs))(msg)
+end)
+
+Handlers.add("Embedding-Data", Handlers.utils.hasMatchingTag("Action", "Embedding-Data"), function (msg)
+  local ids = json.decode(msg.Data)
+  assert(ids, "Invalid data")
+  assert(type(ids) == "table", "Data should be a table of IDs")
+  local id_list = {}
+  for _, id in ipairs(ids) do
+    table.insert(id_list, id)
+  end
+  local id_str = table.concat(id_list, ", ")
+  local query = string.format(SQL.BATCH_SET_DOCUMENTS_EMBEDED, id_str)
+  DB:exec(query)
+  Handlers.utils.reply(json.encode(#id_list))(msg)
+end)
+
+PromptReference = PromptReference or 0
+
+Handlers.add("Search-Prompt", Handlers.utils.hasMatchingTag("Action", "Search-Prompt"), function (msg)
+  local data = json.decode(msg.Data)
+  assert(data.dataset_hash, "Missing dataset hash in data")
+  assert(data.prompt, "Missing search prompt")
+  PromptReference = PromptReference + 1
+  local query = string.format(SQL.ADD_PROMPT, tostring(PromptReference), msg.From or "anonymous", data.dataset_hash, data.prompt)
+  DB:exec(query)
+  Handlers.utils.reply(tostring(PromptReference))(msg)
+end)
+
+Handlers.add("GET-TORETRIEVE-PROMPT", Handlers.utils.hasMatchingTag("Action", "GET-TORETRIEVE-PROMPT"), function (msg)
+  local prompts = {}
+  for row in DB:nrows(SQL.GET_TORETRIEVE_PROMPT) do
+    table.insert(prompts, row)
+  end
+  Handlers.utils.reply(json.encode(prompts))(msg)
+end)
+
+Handlers.add("Set-Retrieve-Result", Handlers.utils.hasMatchingTag("Action", "Set-Retrieve-Result"), function (msg)
+  local data = json.decode(msg.Data)
+  for _, item in ipairs(data) do
+    assert(item.id, "Missing id in item")
+    assert(item.sender, "Missing sender in item")
+    assert(item.reference, "Missing reference in item")
+    assert(item.retrieve_result, "Missing result in item")
+    local query = string.format(SQL.SET_RETRIEVE_RESULT, item.retrieve_result, item.id)
+    DB:exec(query)
+    ao.send({
+      Target = item.sender,
+      Tags = {
+        Action = "Search-Prompt-Response",
+        Reference = item.reference
+      },
+      Data = item.retrieve_result
+    })
+  end
+end)
