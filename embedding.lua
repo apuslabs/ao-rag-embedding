@@ -56,7 +56,8 @@ local SQL = {
 Handlers.add("Create-Dataset", Handlers.utils.hasMatchingTag("Action", "Create-Dataset"), function (msg)
   local data = json.decode(msg.Data)
   assert(data, "Invalid data")
-  assert(data.hash, "Missing hash in data")
+  -- hash exists and not empty
+  assert(data.hash and #data.hash > 0, "Invalid hash")
   assert(data.list, "Missing list in data")
   for _, DataSetItem in ipairs(data.list) do
     assert(DataSetItem.content, "Missing content in DataSetItem")
