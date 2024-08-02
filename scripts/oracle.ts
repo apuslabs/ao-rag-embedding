@@ -94,7 +94,7 @@ async function retrievePrompt() {
   res.data.map(({ reference, result }: any) => {
     const prompt = PromptPool[reference];
     if (prompt) {
-      prompt.retrieve_result = result
+      prompt.retrieve_result = result || "Null"
     }
   })
 }
