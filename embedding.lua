@@ -95,16 +95,15 @@ Handlers.add("Embedding-Data", Handlers.utils.hasMatchingTag("Action", "Embeddin
   Handlers.utils.reply(json.encode(#id_list))(msg)
 end)
 
-PromptReference = PromptReference or 0
-
 Handlers.add("Search-Prompt", Handlers.utils.hasMatchingTag("Action", "Search-Prompt"), function (msg)
   local data = json.decode(msg.Data)
+  assert(msg.Tags.Reference and #msg.Tags.Reference ~= 0, "Missing reference in tags")
+  local PromptReference = msg.Tags.Reference
   assert(data.dataset_hash, "Missing dataset hash in data")
   assert(data.prompt, "Missing search prompt")
-  PromptReference = PromptReference + 1
   local query = string.format(SQL.ADD_PROMPT, tostring(PromptReference), msg.From or "anonymous", data.dataset_hash, data.prompt)
   DB:exec(query)
-  Handlers.utils.reply(tostring(PromptReference))(msg)
+  print(msg.From .. " Prompt " .. PromptReference .. " added successfully")
 end)
 
 Handlers.add("GET-TORETRIEVE-PROMPT", Handlers.utils.hasMatchingTag("Action", "GET-TORETRIEVE-PROMPT"), function (msg)
@@ -124,6 +123,9 @@ Handlers.add("Set-Retrieve-Result", Handlers.utils.hasMatchingTag("Action", "Set
     assert(item.retrieve_result, "Missing result in item")
     local query = string.format(SQL.SET_RETRIEVE_RESULT, item.retrieve_result, item.id)
     DB:exec(query)
+    if (item.sender == "anonymous") then
+      return
+    end
     ao.send({
       Target = item.sender,
       Tags = {
