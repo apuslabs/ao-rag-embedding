@@ -4,3 +4,5 @@ __pycache__
 .vscode
 wallets
 node_modules
+dist
+.DS_Store
