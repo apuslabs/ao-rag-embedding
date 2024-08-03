@@ -88,8 +88,10 @@ async def retrieve_data(input_data: RetrieveInput):
                 results = querying.run({"query_embedder": {"text": prompt.prompt}})
                 context_text = ""
                 for d in results["retriever"]["documents"]:
+                    if d.score > 1:
+                        continue
                     meta_str = json.dumps(d.meta) if d.meta else "{}"
-                    context_text += f"Context: {d.content}  Metadata: `{meta_str}`  \n"
+                    context_text += f"Context: {d.content}  Metadata: `{meta_str}` \n"
                 prompt_results.append({
                     "reference": prompt.reference, "result": context_text
                 })
