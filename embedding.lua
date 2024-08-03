@@ -70,6 +70,7 @@ Handlers.add("Create-Dataset", Handlers.utils.hasMatchingTag("Action", "Create-D
     )
     DB:exec(query)
   end
+  Handlers.utils.reply("Dataset created ".. #data.list .. " successfully")(msg)
   print("Dataset created successfully")
 end)
 

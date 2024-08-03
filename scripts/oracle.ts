@@ -49,9 +49,14 @@ function autoEmbeddingDocs() {
   setInterval(async () => {
     console.log(`Auto embedding process started at: ${new Date().toISOString()}`)
     const toEmbeddedDocs = await getUnembeddedDocuments();
+    console.debug(JSON.stringify(toEmbeddedDocs))
     if (toEmbeddedDocs.length) {
-      const embeddingDocs = await embedDocuments(toEmbeddedDocs);
-      console.log(`Successfully embedded ${embeddingDocs} documents`);
+      try {
+        const embeddingDocs = await embedDocuments(toEmbeddedDocs);
+        console.log(`Successfully embedded ${embeddingDocs} documents`);
+      } catch (e) {
+        console.error("Failed to embed documents", e);
+      }
       await setDocumentsEmbedded(toEmbeddedDocs);
     }
   }, 1000 * 60)
