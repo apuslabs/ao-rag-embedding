@@ -40,9 +40,10 @@ def get_querying_pool(user_address):
         querying_pool[user_address] = querying
     return querying_pool[user_address]
 
+# meta may be dict or string or None
 class DocumentInput(BaseModel):
     content: str
-    meta: dict
+    # meta: dict = None
 
 class Dataset(BaseModel):
     dataset_id: str
@@ -68,7 +69,7 @@ async def create_dataset(input_data: CreateDatasetInput):
         count = 0
         for dataset in input_data.list:
             indexed_docs = [
-                Document(content=doc.content, meta=doc.meta) for doc in dataset.documents
+                Document(content=doc.content) for doc in dataset.documents
             ]
             indexing = get_indexing_pool(dataset.dataset_id)
             indexing.run({"embedder": {"documents": indexed_docs}})

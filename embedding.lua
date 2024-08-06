@@ -48,6 +48,9 @@ local SQL = {
   GET_TORETRIEVE_PROMPT = [[
     SELECT * FROM prompts WHERE retrieve_result IS NULL;
   ]],
+  GET_RETRIEVE_PROMPT = [[
+    SELECT * FROM prompts WHERE sender = '%s' AND reference = '%s';
+  ]],
   SET_RETRIEVE_RESULT = [[
     UPDATE prompts SET retrieve_result = '%s' WHERE id = %d;
   ]]
@@ -96,13 +99,17 @@ Handlers.add("Embedding-Data", Handlers.utils.hasMatchingTag("Action", "Embeddin
   Handlers.utils.reply(json.encode(#id_list))(msg)
 end)
 
+local function escape_string(str)
+  return string.gsub(str, "'", "''")
+end
+
 Handlers.add("Search-Prompt", Handlers.utils.hasMatchingTag("Action", "Search-Prompt"), function (msg)
   local data = json.decode(msg.Data)
   assert(msg.Tags.Reference and #msg.Tags.Reference ~= 0, "Missing reference in tags")
   local PromptReference = msg.Tags.Reference
   assert(data.dataset_hash, "Missing dataset hash in data")
   assert(data.prompt, "Missing search prompt")
-  local query = string.format(SQL.ADD_PROMPT, tostring(PromptReference), msg.From or "anonymous", data.dataset_hash, data.prompt)
+  local query = string.format(SQL.ADD_PROMPT, escape_string(tostring(PromptReference)), msg.From or "anonymous", escape_string(data.dataset_hash), escape_string(data.prompt))
   DB:exec(query)
   print(msg.From .. " Prompt " .. PromptReference .. " added successfully")
 end)
@@ -127,7 +134,7 @@ Handlers.add("Set-Retrieve-Result", Handlers.utils.hasMatchingTag("Action", "Set
     if (item.sender == "anonymous") then
       return
     end
-    ao.send({
+    Send({
       Target = item.sender,
       Tags = {
         Action = "Search-Prompt-Response",
@@ -136,4 +143,14 @@ Handlers.add("Set-Retrieve-Result", Handlers.utils.hasMatchingTag("Action", "Set
       Data = item.retrieve_result
     })
   end
+end)
+
+Handlers.add("GET-Retrieve-Result", Handlers.utils.hasMatchingTag("Action", "GET-Retrieve-Result"), function (msg)
+  assert(msg.Tags.Reference and #msg.Tags.Reference ~= 0, "Missing reference in tags")
+  assert(msg.Tags.Sender and #msg.Tags.Sender ~= 0, "Missing sender in tags")
+  local prompts = {}
+  for row in DB:nrows(string.format(SQL.GET_RETRIEVE_PROMPT, msg.Tags.Sender, msg.Tags.Reference)) do
+    table.insert(prompts, row)
+  end
+  Handlers.utils.reply(json.encode(prompts))(msg)
 end)
