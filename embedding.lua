@@ -2,6 +2,11 @@ local sqlite3 = require("lsqlite3")
 local json = require("json")
 DB = DB or nil
 
+
+local function escape_string(str)
+  return string.gsub(str, "'", "''")
+end
+
 Handlers.add(
   "Init",
   Handlers.utils.hasMatchingTag("Action", "Init"),
@@ -64,12 +69,12 @@ Handlers.add("Create-Dataset", Handlers.utils.hasMatchingTag("Action", "Create-D
   assert(data.list, "Missing list in data")
   for _, DataSetItem in ipairs(data.list) do
     assert(DataSetItem.content, "Missing content in DataSetItem")
-    local meta = DataSetItem.meta or {}
+    -- local meta = DataSetItem.meta or {}
     local query = string.format(
       SQL.INSERT_DOCUMENTS,
       data.hash,
-      DataSetItem.content,
-      json.encode(meta)
+      escape_string(DataSetItem.content),
+      ""
     )
     DB:exec(query)
   end
@@ -98,10 +103,6 @@ Handlers.add("Embedding-Data", Handlers.utils.hasMatchingTag("Action", "Embeddin
   DB:exec(query)
   Handlers.utils.reply(json.encode(#id_list))(msg)
 end)
-
-local function escape_string(str)
-  return string.gsub(str, "'", "''")
-end
 
 Handlers.add("Search-Prompt", Handlers.utils.hasMatchingTag("Action", "Search-Prompt"), function (msg)
   local data = json.decode(msg.Data)
