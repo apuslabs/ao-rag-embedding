@@ -87,12 +87,13 @@ async def retrieve_data(input_data: RetrieveInput):
             querying = get_querying_pool(dataset.dataset_id)
             for prompt in dataset.prompts:
                 results = querying.run({"query_embedder": {"text": prompt.prompt}})
+                documents = results["retriever"]["documents"]
+                sorted_documents = sorted(documents, key=lambda d: d.score, reverse=True)
+                n = 3
+                top_n_documents = sorted_documents[:n]
                 context_text = ""
-                for d in results["retriever"]["documents"]:
-                    if d.score > 1:
-                        continue
-                    meta_str = json.dumps(d.meta) if d.meta else "{}"
-                    context_text += f"Context: {d.content}  Metadata: `{meta_str}` \n"
+                for d in top_n_documents:
+                    context_text += d.content + "\n"
                 prompt_results.append({
                     "reference": prompt.reference, "result": context_text
                 })
