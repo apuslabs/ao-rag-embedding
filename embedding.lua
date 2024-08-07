@@ -131,7 +131,7 @@ Handlers.add("Set-Retrieve-Result", Handlers.utils.hasMatchingTag("Action", "Set
     assert(item.reference, "Missing reference in item")
     assert(item.retrieve_result, "Missing result in item")
     print("Set Retrieve Result for" .. item.sender .. "  " .. item.reference)
-    local query = string.format(SQL.SET_RETRIEVE_RESULT, item.retrieve_result, item.reference, item.sender)
+    local query = string.format(SQL.SET_RETRIEVE_RESULT, escape_string(item.retrieve_result), item.reference, item.sender)
     DB:exec(query)
     if (item.sender == "anonymous") then
       return
