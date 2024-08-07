@@ -88,11 +88,8 @@ async def retrieve_data(input_data: RetrieveInput):
             for prompt in dataset.prompts:
                 results = querying.run({"query_embedder": {"text": prompt.prompt}})
                 documents = results["retriever"]["documents"]
-                sorted_documents = sorted(documents, key=lambda d: d.score, reverse=True)
-                n = 3
-                top_n_documents = sorted_documents[:n]
                 context_text = ""
-                for d in top_n_documents:
+                for d in documents[:3]:
                     context_text += d.content + "\n"
                 prompt_results.append({
                     "reference": prompt.reference, "result": context_text
