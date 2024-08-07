@@ -57,7 +57,7 @@ local SQL = {
     SELECT * FROM prompts WHERE sender = '%s' AND reference = '%s';
   ]],
   SET_RETRIEVE_RESULT = [[
-    UPDATE prompts SET retrieve_result = '%s' WHERE id = %d;
+    UPDATE prompts SET retrieve_result = '%s' WHERE reference = '%s' and sender = '%s';
   ]]
 }
 
@@ -126,11 +126,12 @@ end)
 Handlers.add("Set-Retrieve-Result", Handlers.utils.hasMatchingTag("Action", "Set-Retrieve-Result"), function (msg)
   local data = json.decode(msg.Data)
   for _, item in ipairs(data) do
-    assert(item.id, "Missing id in item")
+    -- assert(item.id, "Missing id in item")
     assert(item.sender, "Missing sender in item")
     assert(item.reference, "Missing reference in item")
     assert(item.retrieve_result, "Missing result in item")
-    local query = string.format(SQL.SET_RETRIEVE_RESULT, item.retrieve_result, item.id)
+    print("Set Retrieve Result for" .. item.sender .. "  " .. item.reference)
+    local query = string.format(SQL.SET_RETRIEVE_RESULT, item.retrieve_result, item.reference, item.sender)
     DB:exec(query)
     if (item.sender == "anonymous") then
       return
