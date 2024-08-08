@@ -1,11 +1,11 @@
 import { EMBEDDING_PROCESS, EMBEDDING_SERVICE } from "./config";
-import { msgResult } from "./wallet";
+import { dryrun, msgResult } from "./wallet";
 import axios from 'axios'
 
 axios.defaults.baseURL = EMBEDDING_SERVICE
 
 async function getUnembeddedDocuments() {
-  const result = await msgResult(EMBEDDING_PROCESS, { Action: "Get-Unembeded-Documents" });
+  const result = await dryrun(EMBEDDING_PROCESS, { Action: "Get-Unembeded-Documents" });
   const data = result.Messages?.[0]?.Data ?? "[]"
   return JSON.parse(data);
 }
@@ -75,7 +75,7 @@ interface Prompt {
 const PromptPool: Record<string, Prompt> = {}
 
 async function getToRetrievePrompt() {
-  const result = await msgResult(EMBEDDING_PROCESS, { Action: "GET-TORETRIEVE-PROMPT" });
+  const result = await dryrun(EMBEDDING_PROCESS, { Action: "GET-TORETRIEVE-PROMPT" });
   const data = result.Messages?.[0]?.Data ?? "[]"
   const prompts = JSON.parse(data)
   console.log(`Retrieved ${prompts.length} prompts`)

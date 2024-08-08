@@ -1,0 +1,6 @@
+Input Tokens,Ouput 4 tokens,Ouput 8 tokens,Ouput 16 tokens,Ouput 32 tokens,Ouput 64 tokens
+2,50,55,64,83,121
+4,53,58,66,85,123
+16,66,70,79,98,136
+64,120,124,134,153,192
+128,194,200,229,269,349
