@@ -15,6 +15,7 @@
     "typescript": "^5.5.4"
   },
   "dependencies": {
+    "@inquirer/prompts": "^5.3.8",
     "@permaweb/aoconnect": "0.0.48",
     "axios": "^1.7.2"
   }
